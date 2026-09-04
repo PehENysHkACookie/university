@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Відвідуваність пар</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="login-page" id="loginPage">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="fas fa-clipboard-check"></i>
+                <h1>Відвідуваність пар</h1>
+                <p>Введіть свої дані для входу</p>
+            </div>
+            <div class="login-form active" id="loginForm">
+                <div class="input-group">
+                    <label><i class="fas fa-user"></i> Прізвище та ім'я:</label>
+                    <select id="userSelect">
+                        <option value="">Оберіть зі списку...</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-lock"></i> Пароль:</label>
+                    <input type="password" id="userPassword" placeholder="Введіть пароль">
+                </div>
+                <button class="btn-login" onclick="loginUser()">
+                    <i class="fas fa-sign-in-alt"></i> Увійти
+                </button>
+            </div>
+            <div class="login-hint">
+                <i class="fas fa-info-circle"></i>
+                <span>Пароль видає викладач</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-app" id="mainApp" style="display: none;">
+        <div class="container">
+            <header class="header">
+                <div class="header-left">
+                    <h1><i class="fas fa-clipboard-check"></i> Відвідуваність пар</h1>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="currentUser"></span>
+                        <span class="user-role" id="userRole"></span>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Вихід
+                    </button>
+                </div>
+            </header>
+
+            <div class="header-stats" id="headerStats"></div>
+
+            <div class="control-panel">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="schedule">
+                        <i class="fas fa-calendar-alt"></i> Розклад
+                    </button>
+                    <button class="tab-btn" data-tab="sessions">
+                        <i class="fas fa-list"></i> Всі пари
+                    </button>
+                    <button class="tab-btn" data-tab="history">
+                        <i class="fas fa-table"></i> Історія
+                    </button>
+                    <button class="tab-btn" data-tab="analytics">
+                        <i class="fas fa-chart-bar"></i> Аналітика
+                    </button>
+                    <button class="tab-btn" data-tab="charts">
+                        <i class="fas fa-chart-line"></i> Графіки
+                    </button>
+                    <button class="tab-btn admin-only-tab" data-tab="backup">
+                        <i class="fas fa-database"></i> Резервна копія
+                    </button>
+                    <button class="tab-btn admin-only-tab" data-tab="actions">
+                        <i class="fas fa-history"></i> Історія дій
+                    </button>
+                </div>
+
+                <div class="tab-content" id="scheduleTab">
+                    <div class="schedule-section">
+                        <h2><i class="fas fa-calendar-alt"></i> Розклад пар</h2>
+                        
+                        <div class="schedule-filters">
+                            <div class="filter-group">
+                                <label><i class="fas fa-filter"></i> Період:</label>
+                                <select id="schedulePeriod" onchange="renderSchedule()">
+                                    <option value="all">Всі пари</option>
+                                    <option value="today">Сьогодні</option>
+                                    <option value="week">Цей тиждень</option>
+                                    <option value="month">Цей місяць</option>
+                                    <option value="custom">Обрати дату</option>
+                                </select>
+                            </div>
+                            <div class="filter-group" id="customDateGroup" style="display:none;">
+                                <label><i class="fas fa-calendar"></i> Дата:</label>
+                                <input type="date" id="scheduleCustomDate" onchange="renderSchedule()">
+                            </div>
+                        </div>
+
+                        <div class="admin-only" id="scheduleAddForm">
+                            <div class="schedule-form">
+                                <h3 style="color:#00d4ff; margin-bottom:15px;"><i class="fas fa-plus-circle"></i> Додати нову пару</h3>
+                                <div class="form-row">
+                                    <div class="input-group">
+                                        <label><i class="fas fa-book"></i> Назва пари:</label>
+                                        <input type="text" id="scheduleName" placeholder="Наприклад: Математика" list="nameSuggestions">
+                                        <datalist id="nameSuggestions"></datalist>
+                                    </div>
+                                    <div class="input-group">
+                                        <label><i class="fas fa-user-tie"></i> Викладач:</label>
+                                        <input type="text" id="scheduleTeacher" placeholder="ПІБ викладача" list="teacherSuggestions">
+                                        <datalist id="teacherSuggestions"></datalist>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="input-group">
+                                        <label><i class="fas fa-door-open"></i> Кабінет:</label>
+                                        <input type="text" id="scheduleRoom" placeholder="Наприклад: 305" list="roomSuggestions">
+                                        <datalist id="roomSuggestions"></datalist>
+                                    </div>
+                                    <div class="input-group">
+                                        <label><i class="fas fa-clock"></i> Час:</label>
+                                        <input type="time" id="scheduleTime" list="timeSuggestions">
+                                        <datalist id="timeSuggestions"></datalist>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="input-group">
+                                        <label><i class="fas fa-tag"></i> Тип пари:</label>
+                                        <select id="scheduleType">
+                                            <option value="ЛК">📗 ЛК - Лекція</option>
+                                            <option value="ПЗ"> ПЗ - Практичне заняття</option>
+                                            <option value="ЛБ">📙 ЛБ - Лабораторна робота</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label><i class="fas fa-calendar"></i> Дата:</label>
+                                        <input type="date" id="scheduleDate">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="input-group">
+                                        <label><i class="fas fa-redo"></i> Повторювати:</label>
+                                        <select id="scheduleRepeat">
+                                            <option value="none">Не повторювати</option>
+                                            <option value="weekly">Щотижня</option>
+                                            <option value="biweekly">Кожні 2 тижні</option>
+                                            <option value="monthly">Щомісяця</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label><i class="fas fa-calendar-check"></i> Кількість повторів:</label>
+                                        <input type="number" id="scheduleRepeatCount" min="1" max="20" value="1" placeholder="Кількість разів">
+                                    </div>
+                                </div>
+                                <button class="btn-add" onclick="addScheduleSession()">
+                                    <i class="fas fa-plus-circle"></i> Додати в розклад
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="schedule-list" id="scheduleList"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="sessionsTab">
+                    <div class="filters-bar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchSessions" placeholder="Пошук пар...">
+                        </div>
+                        <div class="date-search-box">
+                            <i class="fas fa-calendar"></i>
+                            <input type="date" id="dateSearch" placeholder="Оберіть дату">
+                        </div>
+                        <div class="sort-controls">
+                            <select id="sortBy">
+                                <option value="date-desc">📅 Спочатку нові</option>
+                                <option value="date-asc">📅 Спочатку старі</option>
+                                <option value="name-asc"> За назвою (А-Я)</option>
+                                <option value="name-desc">🔤 За назвою (Я-А)</option>
+                            </select>
+                            <select id="filterDate">
+                                <option value="all">📅 Всі дати</option>
+                                <option value="today">📅 Сьогодні</option>
+                                <option value="week">📅 Цей тиждень</option>
+                                <option value="month">📅 Цей місяць</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sessions-grid" id="sessionsGrid"></div>
+                </div>
+
+                <div class="tab-content" id="historyTab">
+                    <div class="history-controls">
+                        <button class="btn-export csv" onclick="exportToCSV()">
+                            <i class="fas fa-file-csv"></i> Експорт CSV
+                        </button>
+                        <button class="btn-export excel" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel"></i> Експорт Excel
+                        </button>
+                        <button class="btn-export json" onclick="exportToJSON()">
+                            <i class="fas fa-file-download"></i> Експорт JSON
+                        </button>
+                        <button class="btn-export print" onclick="printHistory()">
+                            <i class="fas fa-print"></i> Друк
+                        </button>
+                        <button class="btn-export compare" onclick="openCompareModal()">
+                            <i class="fas fa-balance-scale"></i> Порівняти
+                        </button>
+                    </div>
+                    <div id="historyTable"></div>
+                </div>
+
+                <div class="tab-content" id="analyticsTab">
+                    <div class="analytics-grid" id="analyticsGrid"></div>
+                </div>
+
+                <div class="tab-content" id="chartsTab">
+                    <div class="charts-grid" id="chartsGrid"></div>
+                </div>
+
+                <div class="tab-content admin-only" id="backupTab">
+                    <div class="backup-section">
+                        <h2><i class="fas fa-database"></i> Резервне копіювання</h2>
+                        <div class="backup-actions">
+                            <button class="btn-backup" onclick="createBackup()">
+                                <i class="fas fa-download"></i> Зберегти резервну копію
+                            </button>
+                            <button class="btn-backup restore" onclick="document.getElementById('restoreFile').click()">
+                                <i class="fas fa-upload"></i> Відновити з резервної копії
+                            </button>
+                            <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreBackup(event)">
+                            <button class="btn-backup danger" onclick="clearAllData()">
+                                <i class="fas fa-trash"></i> Очистити всі дані
+                            </button>
+                        </div>
+                        <div class="backup-info">
+                            <h3>Інформація про дані:</h3>
+                            <div id="backupInfo"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content admin-only" id="actionsTab">
+                    <div class="actions-section">
+                        <div class="actions-header">
+                            <h2><i class="fas fa-history"></i> Історія дій</h2>
+                            <button class="btn-export danger" onclick="clearActionLog()">
+                                <i class="fas fa-trash"></i> Очистити історію
+                            </button>
+                        </div>
+                        <div id="actionsList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal" id="sessionModal">
+                <div class="modal-content large">
+                    <div class="modal-header">
+                        <h2 id="modalTitle">Відмітка відвідуваності</h2>
+                        <button class="modal-close" onclick="closeModal()">&times;</button>
+                    </div>
+                    <div class="modal-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="studentSearch" placeholder="Пошук студента..." oninput="filterStudentsInModal()">
+                    </div>
+                    <div class="modal-body" id="modalBody"></div>
+                </div>
+            </div>
+
+            <div class="modal" id="reasonModal">
+                <div class="modal-content small">
+                    <div class="modal-header">
+                        <h2>Причина відсутності</h2>
+                        <button class="modal-close" onclick="closeReasonModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="reasonStudentName" style="margin-bottom: 15px; color: #00d4ff;"></p>
+                        <div class="reason-options">
+                            <button class="reason-btn" onclick="selectReason('Хвороба')">
+                                <i class="fas fa-notes-medical"></i> Хвороба
+                            </button>
+                            <button class="reason-btn" onclick="selectReason('Сімейні обставини')">
+                                <i class="fas fa-home"></i> Сімейні обставини
+                            </button>
+                            <button class="reason-btn" onclick="selectReason('Запізнення')">
+                                <i class="fas fa-clock"></i> Запізнення
+                            </button>
+                            <button class="reason-btn" onclick="selectReason('Інше')">
+                                <i class="fas fa-ellipsis-h"></i> Інше
+                            </button>
+                            <button class="reason-btn no-reason" onclick="selectReason(null)">
+                                <i class="fas fa-times"></i> Без причини
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal" id="compareModal">
+                <div class="modal-content large">
+                    <div class="modal-header">
+                        <h2>Порівняння студентів</h2>
+                        <button class="modal-close" onclick="closeCompareModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="compare-select">
+                            <label>Оберіть до 4 студентів для порівняння:</label>
+                            <div id="compareStudentsList"></div>
+                        </div>
+                        <button class="btn-compare" onclick="showCompareResults()">
+                            <i class="fas fa-chart-bar"></i> Порівняти
+                        </button>
+                        <div id="compareResults"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
